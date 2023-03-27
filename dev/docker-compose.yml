@@ -1,0 +1,70 @@
+# run docker-compose build from inside the directory docker-compose.yml is. build context is defined relative to the docker-compose.yml file
+version: "3.7"
+services:
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+#    working_dir: /data/db
+#    environment:
+#      - AUTH=yes
+#      - MONGO_INITDB_ROOT_USERNAME=admin
+#      - MONGO_INITDB_ROOT_PASSWORD=admin
+#    deploy:
+#      replicas: 1
+    volumes:
+      # this way the database is stored in the host machine and outlive the container
+      - D:/Projects_D/garment_search/mongo_data/db:/data/db
+
+#    volumes:
+#        - /garment_search/mongo_data:/data/db
+#        - /garment_search/mongo_config:/data/configdb
+#        - /garment_search/mongo_logs:/data/logs
+#        - /garment_search/mongo_backup:/data/backup
+#        - /garment_search/mongo_certificates:/data/certificates
+#        - /garment_search/mongo_initdb:/docker-entrypoint-initdb.d
+#        - /garment_search/mongo_keyfile:/data/keyfile
+#        - /garment_search/mongo_docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh
+#        - /garment_search/mongo_docker-entrypoint-initdb.d:/usr/local/bin/docker-entrypoint-initdb.d
+#        - /garment_search/mongo_docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+#        - /garment_search/mongo_docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+
+  gs_backend:
+    build:
+      context: ../../gs_backend/gs_backend_src  # relative to the docker-compose.yml file
+      dockerfile: dev_container/Dockerfile  # the Dockerfile path is relative to the build context
+    volumes:
+      # the from path is the path of the folder in the VM (so it has to be shared with windows first)
+      # the to path is the path of the folder in the container (the WORKDIR of the Dockerfile)
+      - D:/Projects_D/garment_search/gs_backend/gs_backend_src:/usr/src/gs_backend_src
+    expose:
+      - 8000 # Exposes ports without publishing them to the host machine, they’ll only be accessible to linked services
+    ports:
+      - "8000:8000"  # host:container
+    depends_on:
+      - mongo
+    env_file:
+      - ../../gs_backend/gs_backend_src/.env
+    environment:
+      WATCHFILES_FORCE_POLLING: 1
+
+  gs_web_client:
+    build:
+      context: ../../gs_web_client/gs_web_client_src  # relative to the docker-compose.yml file
+      dockerfile: dev_container/Dockerfile  # the Dockerfile path is relative to the build context
+    volumes:
+      # the from path is the path of the folder in the VM (so it has to be shared with windows first)
+      # the to path is the path of the folder in the container (the WORKDIR of the Dockerfile)
+      - D:/Projects_D/garment_search/gs_web_client/gs_web_client_src:/usr/src/gs_web_client_src
+    expose:
+      - 3000 # Exposes ports without publishing them to the host machine, they’ll only be accessible to linked services
+    ports:
+      - "3000:3000"  # host:container
+    stdin_open: true  # allows to run the container in interactive mode. (it solves the exit with code 0 issue: https://github.com/facebook/create-react-app/issues/8688)
+    env_file:
+      - ../../gs_web_client/gs_web_client_src/.env
+    environment:
+      # CHOKIDAR_USEPOLLING=true is needed for hot reloading on container running in docker-machine on windows host
+      CHOKIDAR_USEPOLLING: 1
